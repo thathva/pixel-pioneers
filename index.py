@@ -4,6 +4,18 @@ import os
 import PyPDF2
 from PyPDF2 import PdfReader, PdfWriter
 
+
+def parse_settings(settings):
+    ocr_settings = {}
+
+    for i in range(1, len(settings), 2):
+        text_key = settings[i - 1][1].strip('"')
+        loc_values = tuple(map(int, settings[i][1].split(",")))
+        ocr_settings[text_key] = loc_values
+
+    return ocr_settings
+
+
 # Function to split the pdfs
 def split_into_pdfs(file, output_directory, value):
     # Read pdf
@@ -17,16 +29,21 @@ def split_into_pdfs(file, output_directory, value):
         if page_no < value:
             continue
         # Create pdf with file name (to-do)
-        with open(output_directory + "/" + "document-page%s.pdf" % i, "wb") as outputStream:
+        with open(
+            output_directory + "/" + "document-page%s.pdf" % i, "wb"
+        ) as outputStream:
             output.write(outputStream)
             output = PdfWriter()
 
+
 # Read config
 config = configparser.ConfigParser()
-config.read('config.cfg')
-input_directory = config['Files']['input']
-output_directory = config['Files']['output']
+config.read("config.cfg")
+input_directory = config["Files"]["input"]
+output_directory = config["Files"]["output"]
 value = 4
+
+ocr_settings = parse_settings(config.items("OCR"))
 
 # Iterate through every pdf file
 for file in os.listdir(input_directory):

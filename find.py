@@ -1,7 +1,14 @@
 import fitz  # PyMuPDF
 import pytesseract
 from PIL import Image
+import configparser
+from sys import exit
+import logging
 
+config = configparser.ConfigParser()
+config.read("config.cfg")
+logging.basicConfig(filename='ocr.log', level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+pytesseract.pytesseract.tesseract_cmd = r"{}".format(config.get('LibraryOptions', 'location'))
 
 def adjust_coordinates_for_image(coordinates, image_width, page_width):
     # Unpack the original coordinates
@@ -32,11 +39,21 @@ def is_subdocument(page, ocr_settings, image_width, page_width):
         coordinates = ocr_settings[doc_type]
         img_rect = fitz.Rect(coordinates)
         img_pixmap = page.get_pixmap(clip=img_rect)
-        pil_image = Image.frombytes(
-            "RGB", [img_pixmap.width, img_pixmap.height], img_pixmap.samples
-        )
-        extracted_text = pytesseract.image_to_string(pil_image)
-
+        try:
+            pil_image = Image.frombytes(
+                "RGB", [img_pixmap.width, img_pixmap.height], img_pixmap.samples
+            )
+        except Exception as e:
+            logging.error(e)
+            print('Error! Check coordinates')
+            exit()
+        try:
+            extracted_text = pytesseract.image_to_string(pil_image)
+        except Exception as e:
+            logging.error(e)
+            print('Please specify location of Tesseract folder (Default: Tesseract-OCR/tesseract.exe)')
+            exit()
+    
         extracted_text = extracted_text.strip().lower()
 
         if doc_type.lower() in extracted_text:

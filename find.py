@@ -7,8 +7,15 @@ import logging
 
 config = configparser.ConfigParser()
 config.read("config.cfg")
-logging.basicConfig(filename='ocr.log', level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-pytesseract.pytesseract.tesseract_cmd = r"{}".format(config.get('LibraryOptions', 'location'))
+logging.basicConfig(
+    filename="ocr.log",
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s",
+)
+pytesseract.pytesseract.tesseract_cmd = r"{}".format(
+    config.get("LibraryOptions", "location")
+)
+
 
 def adjust_coordinates_for_image(coordinates, image_width, page_width):
     # Unpack the original coordinates
@@ -45,15 +52,17 @@ def is_subdocument(page, ocr_settings, image_width, page_width):
             )
         except Exception as e:
             logging.error(e)
-            print('Error! Check coordinates')
+            print("Error! Check coordinates")
             exit()
         try:
             extracted_text = pytesseract.image_to_string(pil_image)
         except Exception as e:
             logging.error(e)
-            print('Please specify location of Tesseract folder (Default: Tesseract-OCR/tesseract.exe)')
+            print(
+                "Please specify location of Tesseract folder (Default: Tesseract-OCR/tesseract.exe)"
+            )
             exit()
-    
+
         extracted_text = extracted_text.strip().lower()
 
         if doc_type.lower() in extracted_text:
@@ -65,29 +74,35 @@ def is_subdocument(page, ocr_settings, image_width, page_width):
 def find_subdocuments(pdf_path, ocr_settings):
     subdocuments = []
 
-    # Open the PDF file
-    doc = fitz.open(pdf_path)
+    try:
+        # Open the PDF file
+        doc = fitz.open(pdf_path)
 
-    for page_num, page in enumerate(doc, 1):
-        page_width = page.rect.width
+        for page_num, page in enumerate(doc, 1):
+            page_width = page.rect.width
 
-        image_list = page.get_images()
+            image_list = page.get_images()
 
-        if len(image_list) == 1:
-            img = image_list[0]
-            xref = img[0]  # get the XREF of the image
-            pix = fitz.Pixmap(doc, xref)  # create a Pixmap
-            image_width = pix.width
+            if len(image_list) == 1:
+                img = image_list[0]
+                xref = img[0]  # get the XREF of the image
+                pix = fitz.Pixmap(doc, xref)  # create a Pixmap
+                image_width = pix.width
 
-            status, doc_type = is_subdocument(
-                page, dict(ocr_settings), image_width, page_width
-            )
-            if status:
-                subdocuments.append((doc_type, page_num))
+                status, doc_type = is_subdocument(
+                    page, dict(ocr_settings), image_width, page_width
+                )
+                if status:
+                    subdocuments.append((doc_type, page_num))
 
-        else:
-            print("Multiple Images Found")
+            else:
+                print(f"Multiple Images Found in {pdf_path} at {page_num} page")
 
-    # Close the PDF document
-    doc.close()
+        # Close the PDF document
+        doc.close()
+    except Exception as e:
+        print(f"Sorry, couldn't find subdocuments for {pdf_path}", e)
+        logging.error(e)
+        return []
+
     return subdocuments

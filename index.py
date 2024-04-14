@@ -1,7 +1,7 @@
 import logging
 import configparser
+import argparse
 import os
-import PyPDF2
 from PyPDF2 import PdfReader, PdfWriter
 from concurrent.futures import ThreadPoolExecutor
 from find import find_subdocuments
@@ -74,12 +74,31 @@ def process_file(file):
 def main():
     global input_directory, output_directory, ocr_settings
 
+    parser = argparse.ArgumentParser(description="Process some files.")
+    parser.add_argument("--config", type=str, help="Path to the configuration file")
+    parser.add_argument("--input", type=str, help="Path to the input directory")
+    parser.add_argument("--output", type=str, help="Path to the output directory")
+    args = parser.parse_args()
+
     # Read config
     config = configparser.ConfigParser()
-    config.read("config.cfg")
+
+    if args.config:
+        if os.path.exists(args.config):
+            config.read(args.config)
+        else:
+            print("Specified config file not found.")
+            return
+    else:
+        if os.path.exists("config.cfg"):
+            config.read("config.cfg")
+        else:
+            print("Default config file 'config.cfg' not found.")
+            return
+
     try:
-        input_directory = config["Files"]["input"]
-        output_directory = config["Files"]["output"]
+        input_directory = args.input if args.input else config["Files"]["input"]
+        output_directory = args.output if args.output else config["Files"]["output"]
         ocr_settings = parse_settings(config.items("OCR"))
     except Exception as e:
         print(

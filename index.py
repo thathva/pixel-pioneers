@@ -24,14 +24,23 @@ def split_into_pdfs(input_directory, file, output_directory, text_and_pages):
         print('Processing ' + file)
         inputpdf = PdfReader(open(input_directory + "/" + file, "rb"))
         filename = file.split(".")[0]
+        curr_index = 0
         for index, (label, page_number) in enumerate(text_and_pages):
             output = PdfWriter()
             start_page = page_number - 1  # Adjust to 0-based index
-            end_page = text_and_pages[index + 1][1] - 1 if index < len(text_and_pages) - 1 else len(inputpdf.pages)
+            end_page = text_and_pages[index + 1][1] - 1 if index < len(text_and_pages) - 1 else page_number
+            curr_index = max(curr_index, end_page)
             for i in range(start_page, end_page):
                 output.add_page(inputpdf.pages[i])
             with open(f"{output_directory}/{filename}_{label.title()}.pdf", "wb") as outputStream:
                 flag = True
+                output.write(outputStream)
+        # edge case - leftover pages
+        if curr_index < len(inputpdf.pages):
+            output = PdfWriter()
+            for i in range(curr_index, len(inputpdf.pages)):
+                output.add_page(inputpdf.pages[i])
+            with open(f"{output_directory}/{filename}_extra.pdf", "wb") as outputStream:
                 output.write(outputStream)
         if flag:
             print('Saved to ' + output_directory)
